@@ -201,72 +201,25 @@ window.__ModuleLoader__.load({
     }
 
     function apply(ctx) {
-      const style = document.createElement('style')
-      style.textContent = STYLE
-      style.dataset.dshCollabStyle = ''
-      document.head.appendChild(style)
-
-      // Native 0.2 surface: one main panel + one sidebar row.
-      if (ctx && ctx.slots && typeof ctx.slots.inject === 'function') {
-        try {
+      // The module injects ["slots"], so this runs after the slot service exists. Mirror the
+      // dsh-logcat pattern: register the main panel and its sidebar row, and never throw — a thrown
+      // client entry aborts the whole web boot ("entry did not activate").
+      try {
+        const style = document.createElement('style')
+        style.textContent = STYLE
+        style.dataset.dshCollabStyle = ''
+        document.head.appendChild(style)
+        if (ctx && ctx.slots && typeof ctx.slots.inject === 'function') {
           ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: 'collab' }, () => h(BoardPanel)))
           ctx.slots.inject('sidebar.panellist', () =>
             ctx.slots.register({ name: 'sidebar.panellist', id: 'collab', order: 101, label: '协作看板' }, Icon),
           )
-          return
-        } catch (error) {
-          console.warn('[dsh-task-relay-lite] native slots unavailable:', error)
         }
+      } catch (error) {
+        console.warn('[dsh-task-relay-lite] mount failed:', error)
       }
-
-      // Legacy fallback: sidebar row + right-hand drawer (self-healing).
-      let drawer = document.getElementById('dsh-collab-drawer')
-      if (drawer === null) {
-        drawer = document.createElement('div')
-        drawer.id = 'dsh-collab-drawer'
-        drawer.className = 'dsh-collab-drawer'
-        drawer.hidden = true
-        document.body.appendChild(drawer)
-      }
-      const root = require('react-dom/client').createRoot(drawer)
-      root.render(h(BoardPanel))
-
-      const entry = document.createElement('button')
-      entry.type = 'button'
-      entry.dataset.dshCollabEntry = ''
-      entry.className = 'dsh-collab-entry'
-      entry.innerHTML = '<span class="dsh-collab-entry-icon">▦</span><span class="dsh-collab-entry-label">协作看板</span>'
-      entry.addEventListener('click', () => {
-        drawer.hidden = !drawer.hidden
-        if (drawer.hidden) delete entry.dataset.active
-        else entry.dataset.active = 'true'
-      })
-
-      const findRoot = () => {
-        const column = document.querySelector('[data-pane="sidebar"], [class*="sidebarCol"]')
-        if (column === null) return undefined
-        return column.querySelector('[class*="logoRow"]')?.parentElement ?? column.firstElementChild ?? undefined
-      }
-      let placed = false
-      let rootEl
-      const tryPlace = () => {
-        if (rootEl && !rootEl.isConnected) {
-          rootEl = undefined
-          placed = false
-        }
-        rootEl = rootEl || findRoot()
-        if (rootEl === undefined) return
-        if (!rootEl.contains(entry)) {
-          const anchor = rootEl.querySelector('[data-dsh-logcat-entry]') || rootEl.querySelector('button[class*="newSession"]') || rootEl.lastElementChild
-          rootEl.insertBefore(entry, anchor ? anchor.nextElementSibling : null)
-        }
-        placed = true
-      }
-      const observer = new MutationObserver(tryPlace)
-      observer.observe(document.body, { childList: true, subtree: true })
-      tryPlace()
     }
 
-    return { apply, inject: [] }
+    return { apply, inject: ['slots'] }
   },
 })

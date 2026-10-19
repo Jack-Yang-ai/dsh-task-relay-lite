@@ -1,6 +1,6 @@
 {
   "name": "dsh-task-relay-lite",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Cross-session task queue and handoff notes for DeepSeek Harness, compatible with dsh 0.2.x (zero dependencies).",
   "type": "module",
   "main": "./index.mjs",

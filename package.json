@@ -1,0 +1,43 @@
+{
+  "name": "dsh-task-relay-lite",
+  "version": "0.2.0",
+  "description": "Cross-session task queue and handoff notes for DeepSeek Harness, compatible with dsh 0.2.x (zero dependencies).",
+  "type": "module",
+  "main": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.mjs",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "task-queue",
+    "handoff",
+    "cross-session",
+    "coordination"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jack-Yang-ai/dsh-task-relay-lite.git"
+  },
+  "author": "Jack-Yang-ai"
+}

@@ -1,0 +1,10 @@
+# dsh-task-relay-lite bundle 声明：insert 到宿主组合。
+# 可选 config（缺省见 README）：
+#   - id: dsh-task-relay-lite
+#     name: dsh-task-relay-lite
+#     config:
+#       root: '~/.dsh/task-relay-lite'
+#       staleMs: 7200000
+- insert:
+    - id: dsh-task-relay-lite
+      name: dsh-task-relay-lite

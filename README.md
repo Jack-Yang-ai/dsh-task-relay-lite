@@ -19,6 +19,19 @@ plain ESM host plugin.
 | `task_whoami` | session id, cwd, queue path, claimed task count |
 | `task_board` | markdown board: file claims (`*.dshclaim` sidecars) + task queue + handoffs |
 
+## Sidebar panel
+
+The package also ships a browser half (`client.js`, declared as `dsh.client`). After a DSH restart it
+adds a **协作看板** row to the sidebar and renders a read-only board:
+
+- file claims from `*.dshclaim` sidecars (grouped by session, stale marked),
+- task queue counts + active/done tasks,
+- recent handoff notes.
+
+It polls the host plugin's loopback-only endpoint `GET /api/dsh-task-relay/board` every 5 seconds;
+the endpoint is registered through `ctx.webServer` and returns JSON. If the host has no native
+`slots` service, the client falls back to a self-healing DOM sidebar row + right-hand drawer.
+
 ## Behaviour
 
 - **Priority order**: `urgent > high > normal > low`, then newest first; `task_list(sort:"created")` keeps creation order.

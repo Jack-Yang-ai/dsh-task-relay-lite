@@ -1,22 +1,28 @@
 {
   "name": "dsh-task-relay-lite",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Cross-session task queue and handoff notes for DeepSeek Harness, compatible with dsh 0.2.x (zero dependencies).",
   "type": "module",
   "main": "./index.mjs",
   "exports": {
     ".": "./index.mjs",
+    "./client": "./client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
   "files": [
     "index.mjs",
+    "client.js",
     "cordis.patch.yml",
     "README.md"
   ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
     }
   },
   "keywords": [

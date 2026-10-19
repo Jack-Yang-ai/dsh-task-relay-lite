@@ -17,8 +17,10 @@ test('plugin registers every tool and the board combines claims and tasks', asyn
   )
 
   const tools = new Map()
+  const routes = []
   const ctx = {
     tools: { register: (tool) => { tools.set(tool.name, tool); return () => {} } },
+    webServer: { register: (route) => { routes.push(route); return () => {} } },
     effect: (fn) => { fn(); return () => {} },
     on: () => {},
     get: () => null,
@@ -35,4 +37,18 @@ test('plugin registers every tool and the board combines claims and tasks', asyn
   assert.match(board, /session-owner/)
   assert.match(board, /note\.txt/)
   assert.match(board, /backlog item/)
+
+  const route = routes.find((r) => r.path === '/api/dsh-task-relay/board')
+  assert.ok(route, 'board route registered')
+  let status = 0
+  let body = ''
+  await route.handler(
+    { method: 'GET', socket: { remoteAddress: '127.0.0.1' } },
+    { writeHead: (code) => { status = code }, end: (text) => { body = text } },
+  )
+  assert.equal(status, 200)
+  const data = JSON.parse(body)
+  assert.ok(Array.isArray(data.tasks))
+  assert.ok(Array.isArray(data.claims))
+  assert.ok(data.claims.some((c) => c.file === 'note.txt' && c.tag === 'session-owner'))
 })

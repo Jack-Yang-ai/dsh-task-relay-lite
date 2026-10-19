@@ -355,6 +355,38 @@ async function scanClaims(root) {
   return claims
 }
 
+// One JSON snapshot for the client panel: tasks + handoffs + file claims for every workspace
+// the store has seen (or the host's workspace registry exposes).
+export async function collectBoard(ctx, store) {
+  const tasks = await store.list({})
+  const handoffs = await store.handoffRead()
+  const workspaces = new Set()
+  for (const t of tasks) if (t.workspace) workspaces.add(t.workspace)
+  for (const h of handoffs) if (h.workspace) workspaces.add(h.workspace)
+  try {
+    const registry = ctx && typeof ctx.get === 'function' ? ctx.get('workspaceRegistry') : null
+    if (registry && typeof registry.list === 'function') {
+      for (const w of registry.list()) if (w && typeof w.path === 'string') workspaces.add(w.path)
+    }
+  } catch {}
+  const claims = []
+  for (const root of [...workspaces].slice(0, 12)) {
+    if (!existsSync(root)) continue
+    const found = await scanClaims(root)
+    for (const c of found) claims.push({ ...c, workspace: root, stale: Boolean(c.lastSeenAt && Date.now() - c.lastSeenAt > store.staleMs) })
+  }
+  const counts = { open: 0, claimed: 0, done: 0 }
+  for (const t of tasks) counts[t.status] = (counts[t.status] || 0) + 1
+  return {
+    generatedAt: new Date().toISOString(),
+    workspaces: [...workspaces],
+    claims: claims.slice(0, 300),
+    tasks,
+    counts,
+    handoffs,
+  }
+}
+
 function buildTools(store) {
   return [
     makeTool(
@@ -523,7 +555,7 @@ function buildTools(store) {
 
 const plugin = {
   name: 'dsh-task-relay-lite',
-  inject: ['tools'],
+  inject: ['tools', 'webServer'],
   apply(ctx, config = {}) {
     const rawRoot = config && typeof config.root === 'string' && config.root ? config.root : DEFAULTS.root
     const root = rawRoot.startsWith('~/') ? join(homedir(), rawRoot.slice(2)) : rawRoot
@@ -534,6 +566,30 @@ const plugin = {
 
     for (const tool of buildTools(store)) {
       ctx.effect(() => ctx.tools.register(tool))
+    }
+
+    // Read-only JSON endpoint for the sidebar panel; loopback only, no cache.
+    const webServer = ctx.webServer || (typeof ctx.get === 'function' ? ctx.get('webServer') : null)
+    if (webServer && typeof webServer.register === 'function') {
+      const route = {
+        kind: 'exact',
+        path: '/api/dsh-task-relay/board',
+        handler: async (req, res) => {
+          const ip = req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : ''
+          const loopback = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1'
+          if (!loopback) { res.writeHead(403, { 'content-type': 'text/plain' }); res.end('forbidden'); return }
+          if ((req.method || 'GET') !== 'GET') { res.writeHead(405); res.end(); return }
+          try {
+            const data = await collectBoard(ctx, store)
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            res.end(JSON.stringify(data))
+          } catch (error) {
+            res.writeHead(500, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify({ error: error && error.message ? error.message : String(error) }))
+          }
+        },
+      }
+      ctx.effect(() => webServer.register(route), 'task-relay-lite: board route')
     }
 
     // A disposed session must not leave tasks claimed forever: return them to open.

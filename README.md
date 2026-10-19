@@ -44,6 +44,14 @@ plain ESM host plugin.
 ## Install / test
 
 ```sh
+# from this checkout (development)
 dsh plugin --profile desktop add link:<this-repo>
+
+# from GitHub (once the repo is pushed)
+dsh plugin --profile desktop add github:Jack-Yang-ai/dsh-task-relay-lite
+
+# from npm (after `npm publish --access public`)
+dsh plugin --profile desktop add dsh-task-relay-lite
+
 node --test test/*.test.mjs
 ```
